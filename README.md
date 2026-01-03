@@ -1,16 +1,91 @@
-# React + Vite
+# Canvas Plate.js Editor
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A PowerPoint-like slide editor with draggable, resizable blocks and rich-text editing.
 
-Currently, two official plugins are available:
+## Demo
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+🔗 **Live:** [https://okHadi.github.io/canvas-platejs/](https://okHadi.github.io/canvas-platejs/)
 
-## React Compiler
+## Data Flow
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        BLOCK STATE                              │
+│  blocks = [{ id, x, y, width, height, content: SlateNodes[] }]  │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+           ┌──────────────────┼──────────────────┐
+           ▼                  ▼                  ▼
+    ┌─────────────┐    ┌────────────┐    ┌─────────────┐
+    │  react-rnd  │    │  Slate.js  │    │ Serializer  │
+    │  (position) │    │   (text)   │    │   (HTML)    │
+    └─────────────┘    └────────────┘    └─────────────┘
+           │                  │                  │
+           ▼                  ▼                  ▼
+     x, y, width         Rich text         HTML output
+     height              content           with absolute
+                                           positioning
+```
 
-## Expanding the ESLint configuration
+## Libraries
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### react-rnd
+
+Wraps each block for drag + resize.
+
+```jsx
+<Rnd
+  default={{ x: 40, y: 40, width: 300, height: 100 }}
+  bounds="parent"
+  onDragStop={(e, d) => updatePosition(d.x, d.y)}
+  onResizeStop={(e, dir, ref, delta, pos) => updateSize(ref.style.width)}
+>
+  {children}
+</Rnd>
+```
+
+### Slate.js
+
+Each block contains an independent Slate editor for rich-text.
+
+```jsx
+// Slate stores content as a tree of nodes
+content: [
+  { type: 'paragraph', children: [{ text: 'Hello', bold: true }] }
+]
+
+// Rendering
+<Slate editor={editor} initialValue={content} onChange={setContent}>
+  <Editable renderLeaf={...} renderElement={...} />
+</Slate>
+```
+
+### HTML Serialization
+
+Converts Slate nodes → HTML with positions.
+
+```javascript
+// Input: Block state
+{ x: 40, y: 40, width: 300, content: [{ type: 'paragraph', children: [...] }] }
+
+// Output: Absolute-positioned HTML
+<div style="position: absolute; left: 40px; top: 40px; width: 300px;">
+  <p>Hello</p>
+</div>
+```
+
+## Quick Start
+
+```bash
+npm install
+npm run dev
+```
+
+## Stack
+
+| Library                                                  | Purpose           |
+| -------------------------------------------------------- | ----------------- |
+| [react-rnd](https://github.com/bokuweb/react-rnd)        | Drag & resize     |
+| [Slate.js](https://www.slatejs.org/)                     | Rich-text editing |
+| [escape-html](https://www.npmjs.com/package/escape-html) | Safe HTML output  |
+| Vite + React                                             | Build & UI        |
